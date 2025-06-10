@@ -1,0 +1,1 @@
+# herda de inimigo
