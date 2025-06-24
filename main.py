@@ -1,4 +1,3 @@
-# TP2_POO/main.py
 import pygame
 import sys
 import random
@@ -12,34 +11,29 @@ from src.entities.inimigorapido import InimigoRapido
 
 class Jogo:
     def __init__(self):
-        # Inicializa o jogo e seus recursos
         pygame.init()
+        pygame.mixer.init() 
         
         self.settings = Configuracoes()
         self.tela = pygame.display.set_mode(
             (self.settings.LARGURA_TELA, self.settings.ALTURA_TELA)
         )
-        # nome do jogo
         pygame.display.set_caption("Guerra Estelar")
-        
         self.clock = pygame.time.Clock()
         
-        # no caso de utilizar fonte personalizada
-        caminho_fonte = os.path.join('assets', 'fonts', 'sua_fonte_pixel.ttf')
         try:
+            caminho_fonte = os.path.join('assets', 'fonts', 'sua_fonte_pixel.ttf')
             self.fonte_grande = pygame.font.Font(caminho_fonte, 60)
             self.fonte_pequena = pygame.font.Font(caminho_fonte, 32)
         except FileNotFoundError:
-            print(f"AVISO: Arquivo de fonte não encontrado. Usando fonte padrão.")
             self.fonte_grande = pygame.font.Font(None, 74)
             self.fonte_pequena = pygame.font.Font(None, 40)
 
-        self._carregar_imagens()
+        self._carregar_midia()
         
         self.estado_jogo = 'TELA_INICIAL'
 
     def rodar_jogo(self):
-        # Loop principal
         while True:
             if self.estado_jogo == 'TELA_INICIAL':
                 self._rodar_tela_inicial()
@@ -49,7 +43,6 @@ class Jogo:
                 self._rodar_fim_de_jogo()
 
     def _rodar_tela_inicial(self):
-        # Controla o loop da tela inicial
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 pygame.quit()
@@ -67,13 +60,11 @@ class Jogo:
         self.clock.tick(self.settings.FPS)
 
     def _rodar_partida(self):
-        # Controla o loop da partida
         self._checar_eventos_partida()
         self._atualizar_sprites()
         self._atualizar_tela_partida()
 
     def _rodar_fim_de_jogo(self):
-        """Controla o loop da tela de fim de jogo."""
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 pygame.quit()
@@ -90,7 +81,6 @@ class Jogo:
         self.clock.tick(self.settings.FPS)
 
     def _iniciar_nova_partida(self):
-        # Prepara os objetos para uma nova partida
         self.pontuacao = 0
         self.all_sprites = pygame.sprite.Group()
         self.inimigos = pygame.sprite.Group()
@@ -98,9 +88,10 @@ class Jogo:
         self.jogador = Jogador()
         self.all_sprites.add(self.jogador)
         pygame.time.set_timer(pygame.USEREVENT, 1000)
+        if self.musica_carregada:
+            pygame.mixer.music.play(loops=-1)
 
     def _checar_eventos_partida(self):
-        # Verifica eventos durante a partida
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 pygame.quit()
@@ -116,12 +107,13 @@ class Jogo:
         colisoes = pygame.sprite.groupcollide(self.projetis, self.inimigos, True, True)
         if colisoes:
             self.pontuacao += 10
+            self.som_explosao.play()
 
         if pygame.sprite.spritecollide(self.jogador, self.inimigos, True):
             self.estado_jogo = 'FIM_DE_JOGO'
+            pygame.mixer.music.stop()
 
     def _atualizar_tela_partida(self):
-        """Desenha a tela durante a partida."""
         self.tela.fill(self.settings.COR_DE_FUNDO)
         self.all_sprites.draw(self.tela)
         self._desenhar_texto(f"Pontos: {self.pontuacao}", self.fonte_pequena, 80, 25)
@@ -129,6 +121,7 @@ class Jogo:
         self.clock.tick(self.settings.FPS)
 
     def _disparar_projetil(self):
+        self.som_tiro.play()
         novo_projetil = Projetil(self.jogador.rect.centerx, self.jogador.rect.top)
         self.all_sprites.add(novo_projetil)
         self.projetis.add(novo_projetil)
@@ -141,16 +134,33 @@ class Jogo:
         self.all_sprites.add(inimigo)
         self.inimigos.add(inimigo)
         
-    def _carregar_imagens(self):
-        # Carrega os arquivos de imagem
+    def _carregar_midia(self):
+        # Carregar imagem de fundo
         try:
             fundo_path = os.path.join('assets', 'images', 'fundo_inicial.jpg')
             self.fundo_inicial_img = pygame.image.load(fundo_path).convert()
             self.fundo_inicial_img = pygame.transform.scale(self.fundo_inicial_img, (self.settings.LARGURA_TELA, self.settings.ALTURA_TELA))
         except pygame.error as e:
-            print(f"ERRO: Imagem de fundo não encontrada em '{fundo_path}'.")
-            pygame.quit()
-            sys.exit()
+            print(f"ERRO ao carregar imagem de fundo: {e}")
+            self.fundo_inicial_img = pygame.Surface(self.tela.get_size()).convert()
+            self.fundo_inicial_img.fill((0, 0, 0))
+
+        # Carregar sons e música
+        self.musica_carregada = False
+        class SomFalso:
+            def play(self): pass
+        self.som_tiro = SomFalso()
+        self.som_explosao = SomFalso()
+        
+        try:
+            # ALTERADO: Carrega o arquivo .mp3
+            pygame.mixer.music.load(os.path.join('assets', 'sounds', 'musica_fundo.mp3'))
+            pygame.mixer.music.set_volume(0.4)
+            self.som_tiro = pygame.mixer.Sound(os.path.join('assets', 'sounds', 'tiro.wav'))
+            self.som_explosao = pygame.mixer.Sound(os.path.join('assets', 'sounds', 'explosao.wav'))
+            self.musica_carregada = True
+        except pygame.error as e:
+            print(f"AVISO: Um ou mais arquivos de áudio não encontrados. O jogo pode rodar com som parcial. ({e})")
 
     def _desenhar_texto(self, texto, fonte, pos_x, pos_y, cor=(255, 255, 255)):
         surface_texto = fonte.render(texto, True, cor)
