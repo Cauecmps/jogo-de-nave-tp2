@@ -1,10 +1,18 @@
 import pygame
+import os
 
 class Jogador(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.image = pygame.Surface((50, 40))
-        self.image.fill((0, 255, 0))  # Cor da nave
+        caminho_imagem = os.path.join('assets', 'images', 'jogador.png')
+        try:
+            self.image = pygame.image.load(caminho_imagem).convert_alpha()
+        except pygame.error:
+            print(f"ERRO: Imagem do jogador nao encontrada em '{caminho_imagem}'")
+            # cria uma superficie, caso a imagem nao carregue
+            self.image = pygame.Surface((50, 40))
+            self.image.fill((0, 255, 0)) # Verde
+
         self.rect = self.image.get_rect()
         self.rect.center = (400, 550)
         self.velocidade = 5
