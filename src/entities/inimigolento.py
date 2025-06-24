@@ -2,11 +2,9 @@ import pygame
 import random
 from .inimigo import Inimigo # Importa a classe Inimigo do mesmo diretório
 
-# A linha crucial que faltava:
 class InimigoLento(Inimigo):
-    # Agora os métodos estão corretamente DENTRO da classe
+
     def __init__(self):
-        # Esta chamada agora funciona, pois estamos dentro de uma classe filha
         super().__init__()
         
         self.velocidade = random.randint(1, 3)

@@ -12,19 +12,19 @@ from src.entities.inimigorapido import InimigoRapido
 
 class Jogo:
     def __init__(self):
-        """Inicializa o jogo e seus recursos."""
+        # Inicializa o jogo e seus recursos
         pygame.init()
         
         self.settings = Configuracoes()
         self.tela = pygame.display.set_mode(
             (self.settings.LARGURA_TELA, self.settings.ALTURA_TELA)
         )
-        # ALTERADO: Atualiza o nome na janela do jogo
+        # nome do jogo
         pygame.display.set_caption("Guerra Estelar")
         
         self.clock = pygame.time.Clock()
         
-        # Carrega a fonte (substitua 'sua_fonte_pixel.ttf' pelo nome do seu arquivo)
+        # no caso de utilizar fonte personalizada
         caminho_fonte = os.path.join('assets', 'fonts', 'sua_fonte_pixel.ttf')
         try:
             self.fonte_grande = pygame.font.Font(caminho_fonte, 60)
@@ -39,7 +39,7 @@ class Jogo:
         self.estado_jogo = 'TELA_INICIAL'
 
     def rodar_jogo(self):
-        """Loop principal que controla os estados do jogo."""
+        # Loop principal
         while True:
             if self.estado_jogo == 'TELA_INICIAL':
                 self._rodar_tela_inicial()
@@ -49,7 +49,7 @@ class Jogo:
                 self._rodar_fim_de_jogo()
 
     def _rodar_tela_inicial(self):
-        """Controla o loop da tela inicial."""
+        # Controla o loop da tela inicial
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 pygame.quit()
@@ -60,7 +60,6 @@ class Jogo:
                     self._iniciar_nova_partida()
 
         self.tela.blit(self.fundo_inicial_img, (0, 0))
-        # ALTERADO: Atualiza o título na tela inicial
         self._desenhar_texto("Guerra Estelar", self.fonte_grande, self.settings.LARGURA_TELA / 2, self.settings.ALTURA_TELA / 2 - 50)
         self._desenhar_texto("Pressione ESPAÇO para iniciar", self.fonte_pequena, self.settings.LARGURA_TELA / 2, self.settings.ALTURA_TELA * 0.75)
         
@@ -68,7 +67,7 @@ class Jogo:
         self.clock.tick(self.settings.FPS)
 
     def _rodar_partida(self):
-        """Controla o loop da partida."""
+        # Controla o loop da partida
         self._checar_eventos_partida()
         self._atualizar_sprites()
         self._atualizar_tela_partida()
@@ -91,7 +90,7 @@ class Jogo:
         self.clock.tick(self.settings.FPS)
 
     def _iniciar_nova_partida(self):
-        """Prepara os objetos para uma nova partida."""
+        # Prepara os objetos para uma nova partida
         self.pontuacao = 0
         self.all_sprites = pygame.sprite.Group()
         self.inimigos = pygame.sprite.Group()
@@ -101,7 +100,7 @@ class Jogo:
         pygame.time.set_timer(pygame.USEREVENT, 1000)
 
     def _checar_eventos_partida(self):
-        """Verifica eventos durante a partida."""
+        # Verifica eventos durante a partida
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 pygame.quit()
@@ -113,7 +112,6 @@ class Jogo:
                 self._criar_inimigo()
     
     def _atualizar_sprites(self):
-        """Atualiza sprites e colisões."""
         self.all_sprites.update()
         colisoes = pygame.sprite.groupcollide(self.projetis, self.inimigos, True, True)
         if colisoes:
@@ -144,7 +142,7 @@ class Jogo:
         self.inimigos.add(inimigo)
         
     def _carregar_imagens(self):
-        """Carrega os arquivos de imagem."""
+        # Carrega os arquivos de imagem
         try:
             fundo_path = os.path.join('assets', 'images', 'fundo_inicial.jpg')
             self.fundo_inicial_img = pygame.image.load(fundo_path).convert()
