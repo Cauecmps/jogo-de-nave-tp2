@@ -12,4 +12,4 @@ class Projetil(pygame.sprite.Sprite):
     def update(self):
         self.rect.y += self.velocidade
         if self.rect.bottom < 0:
-            self.kill()  # Destruir o projetil quando sair da tela
+            self.kill()  # Destruir o projetil quando sair da tela, para nao gastar processamento
