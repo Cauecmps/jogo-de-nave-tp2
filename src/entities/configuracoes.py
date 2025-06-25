@@ -27,3 +27,6 @@ class Configuracoes:
         self.INIMIGO_RAPIDO_VELOCIDADE_MIN = 4
         self.INIMIGO_RAPIDO_VELOCIDADE_MAX = 8
         self.INIMIGO_RAPIDO_COR = (255, 0, 0) # Vermelho
+        
+        self.PONTOS_PARA_PROXIMO_MAPA = 150
+        self.DURACAO_LEVEL_UP_MS = 1500

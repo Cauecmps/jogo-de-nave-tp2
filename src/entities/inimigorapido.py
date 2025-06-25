@@ -18,11 +18,11 @@ class InimigoRapido(Inimigo):
         self.rect = self.image.get_rect()
         self.rect.x = random.randint(0, 760)
         self.rect.y = random.randint(-100, -40)
-        self.velocidade = random.randint(4, 8)
+        self.velocidade = random.randint(4, 7)
 
     def update(self):
         self.rect.y += self.velocidade
         if self.rect.top > 600:
             self.rect.x = random.randint(0, 760)
             self.rect.y = random.randint(-100, -40)
-            self.velocidade = random.randint(4, 8)
+            self.velocidade = random.randint(4, 7)
