@@ -12,129 +12,141 @@ from src.entities.inimigorapido import InimigoRapido
 class Jogo:
     def __init__(self):
         pygame.init()
+        
         self.settings = Configuracoes()
         self.tela = pygame.display.set_mode(
             (self.settings.LARGURA_TELA, self.settings.ALTURA_TELA)
         )
-        pygame.display.set_caption("Guerra Estelar")
+        pygame.display.set_caption("Guerra Estelar") # tela inicial
         self.clock = pygame.time.Clock()
         self.fonte_grande = pygame.font.Font(None, 74)
         self.fonte_pequena = pygame.font.Font(None, 40)
-        
+
         self._carregar_imagens()
         
         self.estado_jogo = 'TELA_INICIAL'
+        self.opcoes_fim_de_jogo = ['Reiniciar', 'Sair']
+        self.opcao_selecionada = 0
 
     def rodar_jogo(self):
+        """Loop principal que controla os estados do jogo."""
         while True:
-            # O fluxo principal agora lida com o novo estado
+            # Pega os eventos uma vez por loop para todos os estados
+            eventos = pygame.event.get()
+
+            self._processar_eventos(eventos)
+            
+            self._atualizar_logica()
+            
+
+            self._desenhar_tela()
+
+    def _processar_eventos(self, eventos):
+        """Gerencia TODOS os eventos do jogo, independente do estado."""
+        for evento in eventos:
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            # Lógica de eventos para cada estado
             if self.estado_jogo == 'TELA_INICIAL':
-                self._rodar_tela_inicial()
+                if evento.type == pygame.KEYDOWN and evento.key == pygame.K_SPACE:
+                    self.estado_jogo = 'JOGANDO'
+                    self._iniciar_nova_partida()
+            
             elif self.estado_jogo == 'JOGANDO':
-                self._rodar_partida()
-            # NOVO: Adiciona o estado de level up
-            elif self.estado_jogo == 'LEVEL_UP':
-                self._rodar_level_up()
+                if evento.type == pygame.KEYDOWN and evento.key == pygame.K_SPACE:
+                    self._disparar_projetil()
+                elif evento.type == pygame.USEREVENT:
+                    self._criar_inimigo()
+
             elif self.estado_jogo == 'FIM_DE_JOGO':
-                self._rodar_fim_de_jogo()
+                self._processar_eventos_fim_de_jogo(evento)
 
-    def _rodar_tela_inicial(self):
-        for evento in pygame.event.get():
-            if evento.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            if evento.type == pygame.KEYDOWN and evento.key == pygame.K_SPACE:
-                self.estado_jogo = 'JOGANDO'
-                self._iniciar_nova_partida()
+    def _atualizar_logica(self):
+        """Atualiza o estado dos objetos"""
+        if self.estado_jogo == 'JOGANDO':
+            self.all_sprites.update()
+            
+            colisoes = pygame.sprite.groupcollide(self.projetis, self.inimigos, True, True)
+            if colisoes:
+                self.pontuacao += 10
 
-        self.tela.blit(self.fundo_inicial_img, (0, 0))
-        self._desenhar_texto("Guerra Estelar", self.fonte_grande, self.settings.LARGURA_TELA / 2, self.settings.ALTURA_TELA / 2 - 50)
-        self._desenhar_texto("Pressione ESPAÇO para iniciar", self.fonte_pequena, self.settings.LARGURA_TELA / 2, self.settings.ALTURA_TELA * 0.75)
-        pygame.display.flip()
-        self.clock.tick(self.settings.FPS)
+            # Mudança de mapa
+            if self.mapa_atual == 1 and self.pontuacao >= self.settings.PONTOS_PARA_PROXIMO_MAPA:
+                self.estado_jogo = 'LEVEL_UP'
+                self.level_up_timer = pygame.time.get_ticks() # Inicia o timer da pausa
 
-    def _rodar_partida(self):
-        self._checar_eventos_partida()
-        self._atualizar_sprites()
-        self._atualizar_tela_partida()
+            if pygame.sprite.spritecollide(self.jogador, self.inimigos, True):
+                self.estado_jogo = 'FIM_DE_JOGO'
+
+        # NOVO: Lógica para controlar a duração do pop-up
+        elif self.estado_jogo == 'LEVEL_UP':
+            agora = pygame.time.get_ticks()
+            if agora - self.level_up_timer > self.settings.DURACAO_LEVEL_UP_MS:
+                self.mapa_atual = 2
+                self.fundo_ativo = self.fundo_mapa_2
+                self.estado_jogo = 'JOGANDO' # Volta a jogar
+
+    def _desenhar_tela(self):
+        """Desenha tudo na tela com base no estado atual do jogo."""
+        if self.estado_jogo == 'TELA_INICIAL':
+            self.tela.blit(self.fundo_inicial_img, (0, 0))
+            self._desenhar_texto("Guerra Estelar", self.fonte_grande, self.settings.LARGURA_TELA / 2, self.settings.ALTURA_TELA / 2 - 50)
+            self._desenhar_texto("Pressione ESPAÇO para iniciar", self.fonte_pequena, self.settings.LARGURA_TELA / 2, self.settings.ALTURA_TELA * 0.75)
         
-    def _rodar_level_up(self):
-        """NOVO: Pausa o jogo e mostra a mensagem de level up."""
-        # Desenha a tela da partida por baixo, mas sem atualizar os sprites
-        self.tela.blit(self.fundo_ativo, (0, 0))
-        self.all_sprites.draw(self.tela)
-        self._desenhar_texto(f"Pontos: {self.pontuacao}", self.fonte_pequena, 80, 25)
+        elif self.estado_jogo == 'JOGANDO':
+            self.tela.blit(self.fundo_ativo, (0, 0))
+            self.all_sprites.draw(self.tela)
+            self._desenhar_texto(f"Pontos: {self.pontuacao}", self.fonte_pequena, 80, 25)
+        
+        # pop-up apos atingir pontuação avisando a troca de mapa
+        elif self.estado_jogo == 'LEVEL_UP':
+            # Desenha o fundo da partida, mas sem atualizar a lógica
+            self.tela.blit(self.fundo_ativo, (0, 0))
+            self.all_sprites.draw(self.tela)
+            # Desenha o pop-up por cima
+            self._desenhar_texto("NOVO NÍVEL!", self.fonte_grande, self.settings.LARGURA_TELA / 2, self.settings.ALTURA_TELA / 2)
 
-        # Desenha a mensagem por cima
-        self._desenhar_texto("NOVO NÍVEL!", self.fonte_grande, self.settings.LARGURA_TELA / 2, self.settings.ALTURA_TELA / 2)
-        pygame.display.flip()
+        elif self.estado_jogo == 'FIM_DE_JOGO':
+            self.tela.fill(self.settings.COR_DE_FUNDO)
+            self._desenhar_texto("Game Over", self.fonte_grande, self.settings.LARGURA_TELA / 2, self.settings.ALTURA_TELA / 4)
+            self._desenhar_texto(f"Pontuação Final: {self.pontuacao}", self.fonte_pequena, self.settings.LARGURA_TELA / 2, self.settings.ALTURA_TELA / 2 - 50)
+            self._desenhar_opcoes_menu()
 
-        # Verifica se o tempo da pausa já passou
-        agora = pygame.time.get_ticks()
-        if agora - self.level_up_timer > self.settings.DURACAO_LEVEL_UP_MS:
-            # Troca o mapa e volta a jogar
-            self.mapa_atual = 2
-            self.fundo_ativo = self.fundo_mapa_2
-            self.estado_jogo = 'JOGANDO'
-
-    def _rodar_fim_de_jogo(self):
-        for evento in pygame.event.get():
-            if evento.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            if evento.type == pygame.KEYDOWN and evento.key == pygame.K_r:
-                self.estado_jogo = 'TELA_INICIAL'
-
-        self.tela.fill(self.settings.COR_DE_FUNDO)
-        self._desenhar_texto("FIM DE JOGO", self.fonte_grande, self.settings.LARGURA_TELA / 2, self.settings.ALTURA_TELA / 2 - 100)
-        self._desenhar_texto(f"Pontuação Final: {self.pontuacao}", self.fonte_pequena, self.settings.LARGURA_TELA / 2, self.settings.ALTURA_TELA / 2)
-        self._desenhar_texto("Pressione 'R' para reiniciar", self.fonte_pequena, self.settings.LARGURA_TELA / 2, self.settings.ALTURA_TELA / 2 + 50)
         pygame.display.flip()
         self.clock.tick(self.settings.FPS)
+    
+    
+    def _processar_eventos_fim_de_jogo(self, evento):
+        if evento.type == pygame.KEYDOWN:
+            if evento.key == pygame.K_UP:
+                self.opcao_selecionada = (self.opcao_selecionada - 1) % len(self.opcoes_fim_de_jogo)
+            elif evento.key == pygame.K_DOWN:
+                self.opcao_selecionada = (self.opcao_selecionada + 1) % len(self.opcoes_fim_de_jogo)
+            elif evento.key == pygame.K_RETURN:
+                if self.opcoes_fim_de_jogo[self.opcao_selecionada] == 'Reiniciar':
+                    self.estado_jogo = 'TELA_INICIAL'
+                elif self.opcoes_fim_de_jogo[self.opcao_selecionada] == 'Sair':
+                    pygame.quit()
+                    sys.exit()
+
+    def _desenhar_opcoes_menu(self):
+        for i, opcao in enumerate(self.opcoes_fim_de_jogo):
+            cor = (255, 255, 0) if i == self.opcao_selecionada else (255, 255, 255)
+            self._desenhar_texto(opcao, self.fonte_pequena, self.settings.LARGURA_TELA / 2, self.settings.ALTURA_TELA / 2 + 50 + i * 50, cor)
 
     def _iniciar_nova_partida(self):
         self.pontuacao = 0
         self.mapa_atual = 1
         self.fundo_ativo = self.fundo_mapa_1
+        
         self.all_sprites = pygame.sprite.Group()
         self.inimigos = pygame.sprite.Group()
         self.projetis = pygame.sprite.Group()
         self.jogador = Jogador()
         self.all_sprites.add(self.jogador)
         pygame.time.set_timer(pygame.USEREVENT, 1000)
-
-    def _checar_eventos_partida(self):
-        for evento in pygame.event.get():
-            if evento.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            elif evento.type == pygame.KEYDOWN:
-                if evento.key == pygame.K_SPACE:
-                    self._disparar_projetil()
-            elif evento.type == pygame.USEREVENT:
-                self._criar_inimigo()
-    
-    def _atualizar_sprites(self):
-        self.all_sprites.update()
-        colisoes = pygame.sprite.groupcollide(self.projetis, self.inimigos, True, True)
-        if colisoes:
-            self.pontuacao += 10
-
-        # ALTERADO: Lógica para iniciar o level up
-        if self.mapa_atual == 1 and self.pontuacao >= self.settings.PONTOS_PARA_PROXIMO_MAPA:
-            self.estado_jogo = 'LEVEL_UP'
-            # NOVO: Inicia o timer para a pausa
-            self.level_up_timer = pygame.time.get_ticks()
-
-        if pygame.sprite.spritecollide(self.jogador, self.inimigos, True):
-            self.estado_jogo = 'FIM_DE_JOGO'
-
-    def _atualizar_tela_partida(self):
-        self.tela.blit(self.fundo_ativo, (0, 0))
-        self.all_sprites.draw(self.tela)
-        self._desenhar_texto(f"Pontos: {self.pontuacao}", self.fonte_pequena, 80, 25)
-        pygame.display.flip()
-        self.clock.tick(self.settings.FPS)
 
     def _disparar_projetil(self):
         novo_projetil = Projetil(self.jogador.rect.centerx, self.jogador.rect.top)
@@ -151,20 +163,19 @@ class Jogo:
         
     def _carregar_imagens(self):
         try:
-            fundo_path_inicial = os.path.join('assets', 'images', 'fundo_inicial.jpg')
-            self.fundo_inicial_img = pygame.image.load(fundo_path_inicial).convert()
+            fundo_inicial = os.path.join('assets', 'images', 'fundo_inicial.jpg')
+            self.fundo_inicial_img = pygame.image.load(fundo_inicial).convert()
             self.fundo_inicial_img = pygame.transform.scale(self.fundo_inicial_img, (self.settings.LARGURA_TELA, self.settings.ALTURA_TELA))
             
-            fundo_path_1 = os.path.join('assets', 'images', 'fundo_mapa_1.jpg')
-            self.fundo_mapa_1 = pygame.image.load(fundo_path_1).convert()
+            fundo_1 = os.path.join('assets', 'images', 'fundo_mapa_1.jpg')
+            self.fundo_mapa_1 = pygame.image.load(fundo_1).convert()
             self.fundo_mapa_1 = pygame.transform.scale(self.fundo_mapa_1, (self.settings.LARGURA_TELA, self.settings.ALTURA_TELA))
             
-            fundo_path_2 = os.path.join('assets', 'images', 'fundo_mapa_2.png')
-            self.fundo_mapa_2 = pygame.image.load(fundo_path_2).convert_alpha()
+            fundo_2 = os.path.join('assets', 'images', 'fundo_mapa_2.png')
+            self.fundo_mapa_2 = pygame.image.load(fundo_2).convert_alpha()
             self.fundo_mapa_2 = pygame.transform.scale(self.fundo_mapa_2, (self.settings.LARGURA_TELA, self.settings.ALTURA_TELA))
-            
         except pygame.error as e:
-            print(f"ERRO: Imagem de fundo não encontrada. Verifique a pasta 'assets/images'.")
+            print(f"Uma ou mais imagens de fundo não foram encontradas.")
             print(e)
             pygame.quit()
             sys.exit()
