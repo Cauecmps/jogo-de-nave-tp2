@@ -7,7 +7,6 @@ class InimigoLento(Inimigo):
 
     def __init__(self):
         super().__init__()
-        
         caminho_imagem = os.path.join('assets', 'images', 'inimigo_lento.png')
         try:
             self.image = pygame.image.load(caminho_imagem).convert_alpha()
