@@ -28,7 +28,6 @@ class Jogo:
         try:
             caminho_fonte_inicial = os.path.join('assets', 'fonts', 'font2p.ttf')
             self.fonte_inicial_grande = pygame.font.Font(caminho_fonte_inicial, 50)
-            # --- ALTERADO: Tamanho da fonte menor para caber na tela ---
             self.fonte_inicial_pequena = pygame.font.Font(caminho_fonte_inicial, 25) 
         except pygame.error:
             print("AVISO: Fonte 'font2p.ttf' não encontrada, usando fonte padrão para a tela inicial.")
@@ -44,7 +43,6 @@ class Jogo:
         
         self.fullscreen = False
 
-        # --- ADICIONADO: Variáveis para o texto piscar ---
         self.texto_inicial_visivel = True
         self.timer_piscar = pygame.time.get_ticks()
 
@@ -83,10 +81,8 @@ class Jogo:
 
     def _atualizar_logica(self):
         """Atualiza o estado dos objetos"""
-        # --- ADICIONADO: Lógica para o texto piscar ---
         if self.estado_jogo == 'TELA_INICIAL':
             agora = pygame.time.get_ticks()
-            # A cada 700ms, inverte a visibilidade do texto
             if agora - self.timer_piscar > 700:
                 self.texto_inicial_visivel = not self.texto_inicial_visivel
                 self.timer_piscar = agora
@@ -120,7 +116,6 @@ class Jogo:
             self.tela.blit(self.fundo_inicial_img, (0, 0))
             self._desenhar_texto("Guerra Estelar", self.fonte_inicial_grande, self.settings.LARGURA_TELA / 2, self.settings.ALTURA_TELA / 2 - 50)
             
-            # --- ALTERADO: Desenha o texto apenas se ele estiver visível ---
             if self.texto_inicial_visivel:
                 self._desenhar_texto("Pressione ESPAÇO para iniciar", self.fonte_inicial_pequena, self.settings.LARGURA_TELA / 2, self.settings.ALTURA_TELA * 0.75)
         
